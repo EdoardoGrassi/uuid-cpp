@@ -9,6 +9,7 @@ jobs:
         runs-on: ${{matrix.os}}
         steps:
             - run: cmake --version
+            - run: ls
             - run: cmake -S . -B build
             - run: cmake --build build
             - run: cd build && ctest
