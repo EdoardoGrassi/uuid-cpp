@@ -1,6 +1,4 @@
-#include "uuid.hpp"
-
-#include "uuid_defs.hpp"
+#include "uuid-cpp/uuid_core.hpp"
 
 #include <atomic>
 #include <cassert>
@@ -15,7 +13,7 @@
 #include <variant>
 
 
-namespace UUID_NAMESPACE_HPP
+namespace uuid
 {
     using uuid_bytes = std::array<std::byte, 16>;
 
@@ -375,4 +373,4 @@ namespace UUID_NAMESPACE_HPP
         return os.write(reinterpret_cast<const char*>(std::data(u)), sizeof(Uuid));
     }
 
-} // namespace UUID_NAMESPACE_HPP
+} // namespace uuid

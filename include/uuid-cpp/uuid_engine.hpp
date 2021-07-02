@@ -2,12 +2,12 @@
 #ifndef UUID_ENGINE_HPP
 #define UUID_ENGINE_HPP
 
-#include "uuid.hpp"
+#include "uuid-cpp/uuid_core.hpp"
 
 #include <array>
 #include <cstddef>
 
-namespace UUID_NAMESPACE_HPP
+namespace uuid
 {
     /// @brief Generates UUIDs from the MAC address of the host.
     ///
@@ -58,6 +58,6 @@ namespace UUID_NAMESPACE_HPP
     private:
     };
 
-} // namespace UUID_NAMESPACE_HPP
+} // namespace uuid
 
 #endif // !UUID_ENGINE_HPP

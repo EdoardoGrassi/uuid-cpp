@@ -12,5 +12,5 @@ FetchContent_MakeAvailable(googletest)
 include(GoogleTest)
 
 add_executable(${PROJECT_NAME}_tests "uuid_tests.cpp")
-target_link_libraries(${PROJECT_NAME}_tests PRIVATE ${PROJECT_NAME} gtest gtest_main)
+target_link_libraries(${PROJECT_NAME}_tests PRIVATE uuid-cpp gtest_main)
 gtest_discover_tests(${PROJECT_NAME}_tests)

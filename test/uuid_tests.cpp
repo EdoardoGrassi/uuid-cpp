@@ -1,12 +1,12 @@
-#include "uuid.hpp"
-#include "uuid_engine.hpp"
+#include "uuid-cpp/uuid.hpp"
 
 #include "gtest/gtest.h"
 
 #include <algorithm>
+#include <set>
 #include <vector>
 
-using namespace UUID_NAMESPACE_HPP;
+using namespace uuid;
 
 GTEST_TEST(Uuid, Null)
 {
@@ -36,7 +36,7 @@ GTEST_TEST(Uuid, ToString)
 
 GTEST_TEST(Uuid, ParseCompact)
 {
-    Uuid a{} ;
+    Uuid a{};
 
     ASSERT_NO_THROW(parse_compact("00000000000000000000000000000000", a));
     ASSERT_EQ(a, Uuid{});
@@ -90,4 +90,31 @@ GTEST_TEST(AddressEngine, Sequence2)
         assert(std::find(std::cbegin(v), std::cend(v), u) == std::cend(v));
         v.push_back(u);
     }
+}
+
+// Generated UUIDs must be unique.
+GTEST_TEST(SystemEngine, UniquenessProperty)
+{
+    const auto     iters = 100'000;
+    SystemEngine   gen{};
+    std::set<Uuid> bag{};
+
+    for (auto i = 0; i < iters; ++i)
+        bag.insert(gen());
+
+    ASSERT_TRUE(std::size(bag) == iters);
+}
+
+// Generated UUIDs must be in strictly increasing order.
+GTEST_TEST(SystemEngine, IncreasingOrderProperty)
+{
+    const auto        iters = 100'000;
+    SystemEngine      gen{};
+    std::vector<Uuid> bag{};
+    bag.reserve(iters);
+
+    for (auto i = 0; i < iters; ++i)
+        bag.push_back(gen());
+
+    ASSERT_TRUE(std::is_sorted(std::cbegin(bag), std::cend(bag)));
 }

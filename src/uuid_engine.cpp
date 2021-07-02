@@ -1,6 +1,5 @@
-#include "uuid.hpp"
-#include "uuid_defs.hpp"
-#include "uuid_engine.hpp"
+#include "uuid-cpp/uuid_core.hpp"
+#include "uuid-cpp/uuid_engine.hpp"
 
 #if defined(_WIN32)
 //#include <Windows.h>
@@ -16,7 +15,7 @@
 #include <ctime>
 #include <random>
 
-namespace UUID_NAMESPACE_HPP
+namespace uuid
 {
     AddressEngine::AddressEngine()
         : _clock{}
@@ -110,4 +109,4 @@ namespace UUID_NAMESPACE_HPP
 #endif
     }
 
-} // namespace UUID_NAMESPACE_HPP
+} // namespace uuid
