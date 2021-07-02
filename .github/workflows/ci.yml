@@ -1,6 +1,10 @@
 name: multi-platform build
 on: [push]
 
+defaults:
+    run:
+        working-directory: ${{github.workspace}}
+
 jobs:
     build:
         strategy:
