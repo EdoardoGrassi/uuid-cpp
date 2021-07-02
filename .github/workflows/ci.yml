@@ -1,10 +1,6 @@
 name: multi-platform build
 on: [push]
 
-defaults:
-    run:
-        working-directory: ${{github.workspace}}
-
 jobs:
     build:
         strategy:
@@ -12,6 +8,7 @@ jobs:
                 os: [windows-latest, ubuntu-latest, macos-latest]
         runs-on: ${{matrix.os}}
         steps:
+            - uses: actions/checkout@v2
             - run: cmake --version
             - run: ls
             - run: cmake -S . -B build
