@@ -1,4 +1,4 @@
-name: ci
+name: multi-platform build
 on: [push]
 
 jobs:
@@ -8,4 +8,7 @@ jobs:
                 os: [windows-latest, ubuntu-latest, macos-latest]
         runs-on: ${{matrix.os}}
         steps:
-            - run: cmake
+            - run: cmake --version
+            - run: cmake -S . -B build
+            - run: cmake --build build
+            - run: cd build && ctest

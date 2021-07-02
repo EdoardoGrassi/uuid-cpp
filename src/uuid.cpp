@@ -133,19 +133,21 @@ namespace UUID_NAMESPACE_HPP
     [[nodiscard]] std::uint16_t _init_clock_sequence() noexcept
     {
         using _rng     = std::mt19937;
-        using _adaptor = std::independent_bits_engine<_rng, sizeof(uint16_t), uint16_t>;
+        using _adaptor = std::independent_bits_engine<_rng, sizeof(std::uint16_t), std::uint16_t>;
 
         const auto seed = std::chrono::steady_clock::now().time_since_epoch().count();
-        return _adaptor{ seed }();
+        //auto       rng = _rng{ seed };
+        //return _adaptor{ seed }();
+        return _adaptor{ static_cast<std::uint16_t>(seed) }();
     }
 
     [[nodiscard]] auto _init_node_sequence()
     {
-        using _rng      = std::mt19937_64;
-        using _rng_mask = std::independent_bits_engine<_rng, 48, uint64_t>;
+        using _rng     = std::mt19937_64;
+        using _adaptor = std::independent_bits_engine<_rng, 48, std::uint64_t>;
 
         std::random_device seeder;
-        _rng_mask          rng(seeder());
+        _adaptor           rng(seeder());
         return rng();
     }
 

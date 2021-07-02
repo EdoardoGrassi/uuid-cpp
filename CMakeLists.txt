@@ -23,6 +23,8 @@ if(WIN32)
     target_link_libraries(${PROJECT_NAME} PRIVATE ${IPHLPAPI})
 endif()
 
+install(TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME}-targets)
+
 
 # tests
 if (UUID_BUILD_TESTS)

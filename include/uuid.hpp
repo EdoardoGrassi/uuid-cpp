@@ -45,14 +45,14 @@ namespace UUID_NAMESPACE_HPP
         [[nodiscard]] constexpr friend bool operator<=(const Uuid&, const Uuid&) noexcept = default;
         [[nodiscard]] constexpr friend bool operator>=(const Uuid&, const Uuid&) noexcept = default;
 
-        /// @brief Checks whether the UUID is not null.
-        [[nodiscard]] operator bool() const { return has_value(); }
-
         /// @brief Resets to null UUID.
         void clear() noexcept { _bytes.fill(std::byte{ 0 }); }
 
         /// @brief Checks whether the UUID is not null.
-        [[nodiscard]] bool has_value() const noexcept;
+        [[nodiscard]] constexpr operator bool() const { return has_value(); }
+
+        /// @brief Checks whether the UUID is not null.
+        [[nodiscard]] constexpr bool has_value() const noexcept;
 
         /// @brief Returns a pointer to the underlying representation.
         [[nodiscard]] std::byte*       data() noexcept { return std::data(_bytes); }
@@ -68,9 +68,11 @@ namespace UUID_NAMESPACE_HPP
         "Bad class layout: internal padding bytes.");
     static_assert(alignof(Uuid) == 16,
         "Bad class layout: external padding bytes.");
+    //static_assert(std::is_trivially_default_constructible_v<Uuid>);
+    //static_assert(std::is_trivially_constructible_v<Uuid>);
 
 
-    [[nodiscard]] inline bool Uuid::has_value() const noexcept
+    [[nodiscard]] inline constexpr bool Uuid::has_value() const noexcept
     {
         return !std::all_of(std::cbegin(_bytes), std::cend(_bytes),
             [](auto x) { return x == std::byte{ 0 }; });
@@ -78,12 +80,18 @@ namespace UUID_NAMESPACE_HPP
 
     [[nodiscard]] inline std::string to_string(const Uuid& u) { return u.string(); }
 
+    /// @brief Parse a UUID from a string.
+    /// @param s 
+    /// @param out
+    /// 
+    /// Accepted format is the canonical form of UUIDS:
+    ///     xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
     void parse(const std::string_view s, Uuid& out);
 
     void parse_compact(const std::string_view s, Uuid& out);
 
     [[nodiscard]] std::variant<Uuid, std::error_code> try_parse(const std::string_view s) noexcept;
 
-} // namespace drako
+} // namespace UUID_NAMESPACE_HPP
 
 #endif // !UUID_HPP
