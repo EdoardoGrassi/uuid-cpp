@@ -34,13 +34,13 @@ GTEST_TEST(Uuid, ToString)
     ASSERT_EQ(s, "00000000-0000-0000-0000-000000000000");
 }
 
-GTEST_TEST(Uuid, ParseCompact)
+/* GTEST_TEST(Uuid, ParseCompact)
 {
     Uuid a{};
 
     ASSERT_NO_THROW(parse_compact("00000000000000000000000000000000", a));
     ASSERT_EQ(a, Uuid{});
-}
+} */
 
 GTEST_TEST(Uuid, ParseCanonical)
 {

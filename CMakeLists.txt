@@ -21,6 +21,12 @@ if(WIN32)
     find_library(IPHLPAPI "iphlpapi" REQUIRED)
     #message(STATUS "iphlpaipi found at ${IPHLPAPI}")
     target_link_libraries(uuid-cpp PRIVATE ${IPHLPAPI})
+
+elseif(APPLE)
+    
+elseif(UNIX)
+    find_package(libuuid REQUIRED)
+    target_link_libraries(uuid-cpp PRIVATE ${libuuid_LIBRARIES})
 endif()
 
 install(TARGETS uuid-cpp EXPORT ${PROJECT_NAME}-targets)

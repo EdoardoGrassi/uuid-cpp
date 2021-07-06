@@ -69,9 +69,6 @@ namespace uuid
         {
             std::copy(std::cbegin(bytes), std::cend(bytes), std::begin(_bytes));
         }
-
-        explicit constexpr Uuid(const std::span<const char> chars);
-
 #endif
 
         /// @brief Constructs an UUID by parsing a string representation.
@@ -132,7 +129,7 @@ namespace uuid
     ///     xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
     void parse(const std::string_view s, Uuid& out);
 
-    void parse_compact(const std::string_view s, Uuid& out);
+    //void parse_compact(const std::string_view s, Uuid& out);
 
     [[nodiscard]] std::variant<Uuid, std::error_code> try_parse(const std::string_view s) noexcept;
 

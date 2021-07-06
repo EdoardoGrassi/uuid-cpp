@@ -6,6 +6,11 @@
 
 #include <WinSock2.h>
 #include <iphlpapi.h>
+
+#elif defined(__linux__)
+
+#include <uuid/uuid.h>
+
 #endif
 
 #include <atomic>
@@ -102,6 +107,16 @@ namespace uuid
         bytes[13] = std::byte{ guid.Data4[5] };
         bytes[14] = std::byte{ guid.Data4[6] };
         bytes[15] = std::byte{ guid.Data4[7] };
+
+        return Uuid{ bytes };
+
+#elif __linux__
+        uuid_t native;
+        uuid_generate(native);
+
+        std::array<std::byte, 16> bytes{};
+        static_assert(sizeof(uuid_t) == sizeof(bytes));
+        std::memcpy(std::data(bytes), native.__u_bits, std::size(bytes));
 
         return Uuid{ bytes };
 #else
