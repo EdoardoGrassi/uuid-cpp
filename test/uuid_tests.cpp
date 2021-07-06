@@ -93,6 +93,34 @@ GTEST_TEST(AddressEngine, Sequence2)
 }
 
 // Generated UUIDs must be unique.
+GTEST_TEST(AddressEngine, UniquenessProperty)
+{
+    const auto     iters = 100'000;
+    AddressEngine  gen{};
+    std::set<Uuid> bag{};
+
+    for (auto i = 0; i < iters; ++i)
+        bag.insert(gen());
+
+    ASSERT_TRUE(std::size(bag) == iters);
+}
+
+// Generated UUIDs must be in strictly increasing order.
+GTEST_TEST(AddressEngine, IncreasingOrderProperty)
+{
+    const auto        iters = 100'000;
+    AddressEngine     gen{};
+    std::vector<Uuid> bag{};
+    bag.reserve(iters);
+
+    for (auto i = 0; i < iters; ++i)
+        bag.push_back(gen());
+
+    ASSERT_TRUE(std::is_sorted(std::cbegin(bag), std::cend(bag)));
+}
+
+
+// Generated UUIDs must be unique.
 GTEST_TEST(SystemEngine, UniquenessProperty)
 {
     const auto     iters = 100'000;

@@ -38,6 +38,9 @@ namespace uuid
     public:
         explicit RandomEngine(std::uint64_t seed);
 
+        RandomEngine(const RandomEngine&) = default;
+        RandomEngine& operator=(const RandomEngine&) = default;
+
         /// @brief Generates a new UUID.
         [[nodiscard]] Uuid operator()() noexcept;
 

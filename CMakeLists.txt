@@ -1,5 +1,5 @@
-﻿cmake_minimum_required(VERSION 3.8)
-project("uuid-cpp")
+﻿cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
+project("uuid-cpp" LANGUAGES CXX)
 
 #set(UUID_NAMESPACE "uuid" CACHE STRING "Main namespace of the library")
 option(UUID_BUILD_TESTS "Build the unit tests" ON)

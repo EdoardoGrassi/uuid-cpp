@@ -165,7 +165,7 @@ namespace uuid
         }
     }
 
-    [[nodiscard]] uuid_bytes _safe_parse_canonical(const std::string_view s)
+    [[nodiscard]] constexpr uuid_bytes _safe_parse_canonical(const std::string_view s)
     {
         // accepted canonical format: xxxxxxxx-xxxx-Mxxx-Nxxx-xxxxxxxxxxxx
         if (std::size(s) != UUID_CANONICAL_STRING_SIZE)
@@ -237,7 +237,7 @@ namespace uuid
     _try_parse_canonical(std::string_view s) noexcept;
 
 
-    Uuid::Uuid(const std::string_view s)
+    constexpr Uuid::Uuid(const std::string_view s)
         : _bytes{ _safe_parse_canonical(s) }
     {
     }

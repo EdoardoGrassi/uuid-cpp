@@ -4,10 +4,15 @@
 
 #include <algorithm>
 #include <array>
+#include <cassert>
 #include <cstdint>
 #include <string>
 #include <system_error>
 #include <variant>
+
+#if __cpp_lib_span
+#include <span>
+#endif
 
 namespace uuid
 {
@@ -52,8 +57,25 @@ namespace uuid
         {
         }
 
+        template <typename ForwardIt>
+        explicit constexpr Uuid(ForwardIt first, ForwardIt last)
+        {
+            assert(std::distance(first, last) == std::size(_bytes));
+            std::copy(first, last, std::begin(_bytes));
+        }
+
+#if __cpp_lib_span
+        explicit constexpr Uuid(const std::span<const std::byte, 16> bytes) noexcept
+        {
+            std::copy(std::cbegin(bytes), std::cend(bytes), std::begin(_bytes));
+        }
+
+        explicit constexpr Uuid(const std::span<const char> chars);
+
+#endif
+
         /// @brief Constructs an UUID by parsing a string representation.
-        explicit Uuid(const std::string_view sw);
+        constexpr explicit Uuid(const std::string_view sw);
 
 
         Uuid(const Uuid&) noexcept = default;
