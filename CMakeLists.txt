@@ -2,12 +2,12 @@
 project("uuid-cpp" LANGUAGES CXX)
 
 #set(UUID_NAMESPACE "uuid" CACHE STRING "Main namespace of the library")
-option(UUID_BUILD_TESTS "Build the unit tests" ON)
+option(UUID_CPP_BUILD_TESTS "Build the unit tests" ON)
 
 add_library(uuid-cpp STATIC
     "src/uuid_core.cpp"
     "src/uuid_engine.cpp"
-)
+ )
 
 target_compile_features(uuid-cpp PUBLIC cxx_std_20)
 #target_compile_definitions(uuid-cpp PUBLIC UUID_NAMESPACE_HPP=${UUID_NAMESPACE})
@@ -30,11 +30,13 @@ elseif(UNIX)
 endif()
 
 install(TARGETS uuid-cpp EXPORT ${PROJECT_NAME}-targets)
-export(EXPORT ${PROJECT_NAME}-targets)
+export(EXPORT ${PROJECT_NAME}-targets NAMESPACE uuid-cpp::)
 
+add_executable(main "test/main.cpp")
+target_link_libraries(main PRIVATE uuid-cpp)
 
 # tests
-if (UUID_BUILD_TESTS)
+if (UUID_CPP_BUILD_TESTS)
     enable_testing()
     add_subdirectory("test")
 endif()

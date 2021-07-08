@@ -6,16 +6,44 @@
 #include <cstdint>
 #include <ctime>
 #include <iostream>
+#include <optional>
 #include <random>
-#include <span>
 #include <string>
 #include <tuple>
-#include <variant>
 
 
 namespace uuid
 {
-    using uuid_bytes = std::array<std::byte, 16>;
+    constexpr const std::byte RFC_4122_VARIANT_1_MASK{ 0b1001'1111 };
+    constexpr const std::byte RFC_4122_VERSION_1_MASK{ 0b0001'1111 };
+    constexpr const std::byte RFC_4122_VERSION_2_MASK{ 0b0010'1111 };
+    constexpr const std::byte RFC_4122_VERSION_3_MASK{ 0b0011'1111 };
+    constexpr const std::byte RFC_4122_VERSION_4_MASK{ 0b0100'1111 };
+    constexpr const std::byte RFC_4122_VERSION_5_MASK{ 0b0101'1111 };
+
+    // lenght of a UUID in byte array form
+    const size_t UUID_BYTE_SIZE = sizeof(Uuid);
+
+    // lenght of a UUID in canonical ASCII string form (hypens included)
+    const size_t UUID_CANONICAL_STRING_SIZE = sizeof(Uuid) * 2 + sizeof('-') * 4;
+
+    // lenght of a UUID in compacted ASCII string form (no hypens)
+    const size_t UUID_COMPACTED_STRING_SIZE = sizeof(Uuid) * 2;
+
+    const size_t UUID_HYPEN_1_OFFSET = 8;
+    const size_t UUID_HYPEN_2_OFFSET = 8 + 1 + 4;
+    const size_t UUID_HYPEN_3_OFFSET = 8 + 1 + 4 + 1 + 4;
+    const size_t UUID_HYPEN_4_OFFSET = 8 + 1 + 4 + 1 + 4 + 1 + 4;
+
+    const size_t UUID_TIME_FIELD_SIZE   = sizeof(uint64_t); // 64 bits
+    const size_t UUID_TIME_FIELD_OFFSET = 0;
+
+    const size_t UUID_CLOCK_FIELD_SIZE   = sizeof(uint16_t); // 16 bits
+    const size_t UUID_CLOCK_FIELD_OFFSET = UUID_TIME_FIELD_SIZE;
+
+    const size_t UUID_NODE_FIELD_SIZE   = 6; // 48 bits
+    const size_t UUID_NODE_FIELD_OFFSET = UUID_TIME_FIELD_SIZE + UUID_CLOCK_FIELD_SIZE;
+
 
     // memory layout of canonical (network byte order) byte representation for UUIDs
     struct _uuid_byte_layout
@@ -78,6 +106,9 @@ namespace uuid
     constexpr auto DIGIT_GROUP_4_RANGE = std::make_tuple(DIGIT_GROUP_4_OFFSET, DIGIT_GROUP_4_OFFSET + DIGIT_GROUP_4_SIZE);
     constexpr auto DIGIT_GROUP_5_RANGE = std::make_tuple(DIGIT_GROUP_5_OFFSET, DIGIT_GROUP_5_OFFSET + DIGIT_GROUP_5_SIZE);
 
+    using _uuid_bytes = std::array<std::byte, 16>;
+
+
     /*
     void _byte_to_ascii(std::span<const std::byte> src, std::span<char> dst) noexcept
     {
@@ -100,8 +131,8 @@ namespace uuid
         const char TABLE[] = "0123456789abcdef";
         static_assert(sizeof(TABLE) == 16 + 1);
 
-        const auto msbits = std::to_integer<uint8_t>(b >> 4);
-        const auto lsbits = std::to_integer<uint8_t>(b & std::byte{ 0x0f });
+        const auto msbits = std::to_integer<std::uint8_t>(b >> 4);
+        const auto lsbits = std::to_integer<std::uint8_t>(b & std::byte{ 0x0f });
         return { TABLE[msbits], TABLE[lsbits] };
     }
 
@@ -128,27 +159,6 @@ namespace uuid
         return std::isxdigit(static_cast<unsigned char>(c));
     }
 
-    [[nodiscard]] std::uint16_t _init_clock_sequence() noexcept
-    {
-        using _rng     = std::mt19937;
-        using _adaptor = std::independent_bits_engine<_rng, sizeof(std::uint16_t), std::uint16_t>;
-
-        const auto seed = std::chrono::steady_clock::now().time_since_epoch().count();
-        //auto       rng = _rng{ seed };
-        //return _adaptor{ seed }();
-        return _adaptor{ static_cast<std::uint16_t>(seed) }();
-    }
-
-    [[nodiscard]] auto _init_node_sequence()
-    {
-        using _rng     = std::mt19937_64;
-        using _adaptor = std::independent_bits_engine<_rng, 48, std::uint64_t>;
-
-        std::random_device seeder;
-        _adaptor           rng(seeder());
-        return rng();
-    }
-
     template <typename InputIt, typename OutputIt>
     void _safe_parse(InputIt first, InputIt last, OutputIt out)
     {
@@ -165,7 +175,7 @@ namespace uuid
         }
     }
 
-    [[nodiscard]] constexpr uuid_bytes _safe_parse_canonical(const std::string_view s)
+    [[nodiscard]] constexpr _uuid_bytes _safe_parse_canonical(const std::string_view s)
     {
         // accepted canonical format: xxxxxxxx-xxxx-Mxxx-Nxxx-xxxxxxxxxxxx
         if (std::size(s) != UUID_CANONICAL_STRING_SIZE)
@@ -192,8 +202,8 @@ namespace uuid
                     throw std::invalid_argument{ "Invalid hexadecimal digit " + s[i] };
         */
 
-        char       compacted[32];
-        uuid_bytes bytes = {};
+        char        compacted[32];
+        _uuid_bytes bytes = {};
 
         assert(std::size(s) == UUID_CANONICAL_STRING_SIZE);
 
@@ -214,7 +224,7 @@ namespace uuid
         return bytes;
     }
 
-    [[nodiscard]] uuid_bytes _safe_parse_compact(const std::string_view s)
+    [[nodiscard]] constexpr _uuid_bytes _safe_parse_compact(const std::string_view s)
     {
         // accepted format: 'hexdigit' * 32
         // e.g. canonical format without hypens
@@ -226,73 +236,34 @@ namespace uuid
             if (!std::isxdigit(static_cast<unsigned char>(c)))
                 throw std::invalid_argument{ "Invalid hexadecimal digit " + c };
 
-        uuid_bytes bytes{};
+        _uuid_bytes bytes{};
         assert(std::size(s) == UUID_COMPACTED_STRING_SIZE);
         for (std::size_t i = 0; i < std::size(s) / 2; ++i)
             bytes[i] = _unsafe_ascii_to_byte(s[i * 2], s[i * 2 + 1]);
         return bytes;
     }
 
-    [[nodiscard]] std::tuple<uuid_bytes, bool>
-    _try_parse_canonical(std::string_view s) noexcept;
 
-
-    constexpr Uuid::Uuid(const std::string_view s)
-        : _bytes{ _safe_parse_canonical(s) }
+    Uuid parse(const std::string_view s)
     {
-    }
-
-    void parse(const std::string_view s, Uuid& out)
-    {
-        /*
         // accepted canonical format: xxxxxxxx-xxxx-Mxxx-Nxxx-xxxxxxxxxxxx
-        const char hypen = '-';
-
-        std::array<std::byte, 16> bytes;
-        if (std::size(s) != UUID_CANONICAL_STRING_SIZE)
-            throw std::invalid_argument{ "Not a valid UUID." };
-        if ((s[UUID_HYPEN_1_OFFSET] != hypen) || (s[UUID_HYPEN_2_OFFSET] != hypen) ||
-            (s[UUID_HYPEN_3_OFFSET] != hypen) || (s[UUID_HYPEN_4_OFFSET] != hypen))
-            throw std::invalid_argument{ "Not a valid UUID." };
-
-        for (size_t i = 0, j = 0; i < UUID_CANONICAL_STRING_SIZE; i += 2, ++j)
-        {
-            if (s[i] == UUID_HYPEN_1_OFFSET || s[i] == UUID_HYPEN_2_OFFSET ||
-                s[i] == UUID_HYPEN_3_OFFSET || s[i] == UUID_HYPEN_4_OFFSET) // skip '-' separator
-                ++i;
-
-            const auto most_significant_bits = static_cast<unsigned char>(s[i]);
-            const auto less_significant_bits = static_cast<unsigned char>(s[i + 1]);
-            if (!std::isxdigit(most_significant_bits) || !std::isxdigit(less_significant_bits))
-                throw std::invalid_argument{ "Not a valid UUID." };
-            bytes[j] = _unsafe_ascii_to_byte(most_significant_bits, less_significant_bits);
-        }
-
-        out = Uuid{ bytes };
-        */
-
-        if (std::size(s) == UUID_CANONICAL_STRING_SIZE)
-            out = Uuid{ _safe_parse_canonical(s) };
-        else if (std::size(s) == UUID_BYTE_SIZE)
-            out = Uuid{ _safe_parse_compact(s) };
+        return Uuid{ _safe_parse_canonical(s) };
     }
 
-    void parse_compact(const std::string_view s, Uuid& out)
-    {
-        out = Uuid{ _safe_parse_compact(s) };
-    }
 
-    std::variant<Uuid, std::error_code> try_parse(const std::string_view s) noexcept
+    std::optional<Uuid> try_parse(const std::string_view s) noexcept
     {
         // accepted canonical format: xxxxxxxx-xxxx-Mxxx-Nxxx-xxxxxxxxxxxx
 
         const char HYPEN = '-';
         if (std::size(s) != UUID_CANONICAL_STRING_SIZE) // 32 hex digits and 4 hypens
-            return std::make_error_code(std::errc::invalid_argument);
+            return {};
+        //std::make_error_code(std::errc::invalid_argument);
 
         if ((s[UUID_HYPEN_1_OFFSET] != HYPEN) || (s[UUID_HYPEN_2_OFFSET] != HYPEN) ||
             (s[UUID_HYPEN_3_OFFSET] != HYPEN) || (s[UUID_HYPEN_4_OFFSET] != HYPEN))
-            return std::make_error_code(std::errc::invalid_argument);
+            return {};
+        //std::make_error_code(std::errc::invalid_argument);
 
         std::array<std::byte, sizeof(_uuid_byte_layout)> bytes;
         for (size_t i = 0, j = 0; i < UUID_CANONICAL_STRING_SIZE; i += 2, ++j)
@@ -304,7 +275,8 @@ namespace uuid
             const auto most_significant_bits = static_cast<unsigned char>(s[i]);
             const auto less_significant_bits = static_cast<unsigned char>(s[i + 1]);
             if (!std::isxdigit(most_significant_bits) || !std::isxdigit(less_significant_bits))
-                return std::make_error_code(std::errc::invalid_argument);
+                return {};
+            //std::make_error_code(std::errc::invalid_argument);
 
             bytes[j] = _unsafe_ascii_to_byte(most_significant_bits, less_significant_bits);
         }
@@ -362,6 +334,20 @@ namespace uuid
 
         return s;
     }
+
+
+    constexpr Uuid::Uuid(const std::string& s)
+        : _bytes{ _safe_parse_canonical(s) }
+    {
+    }
+
+#if __cpp_lib_string_view
+    constexpr Uuid::Uuid(const std::string_view s)
+        : _bytes{ _safe_parse_canonical(s) }
+    {
+    }
+#endif
+
 
     std::istream& operator>>(std::istream& is, Uuid& u)
     {

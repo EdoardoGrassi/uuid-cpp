@@ -3,6 +3,7 @@
 #include "gtest/gtest.h"
 
 #include <algorithm>
+#include <regex>
 #include <set>
 #include <vector>
 
@@ -29,32 +30,57 @@ GTEST_TEST(Uuid, Null)
 
 GTEST_TEST(Uuid, ToString)
 {
-    const Uuid a{};
-    const auto s = to_string(a);
-    ASSERT_EQ(s, "00000000-0000-0000-0000-000000000000");
+    ASSERT_EQ(to_string(Uuid{}), "00000000-0000-0000-0000-000000000000");
+
+    const std::regex well_formed{
+        "[[:xdigit:]]{8}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{12}",
+        std::regex_constants::optimize
+    };
+
+    SystemEngine gen{};
+    for (auto i = 0; i < 100'000; ++i)
+    {
+        const auto s = to_string(gen());
+        ASSERT_TRUE(std::regex_match(s, well_formed)) << "uuid: " << s;
+    }
 }
 
-/* GTEST_TEST(Uuid, ParseCompact)
-{
-    Uuid a{};
-
-    ASSERT_NO_THROW(parse_compact("00000000000000000000000000000000", a));
-    ASSERT_EQ(a, Uuid{});
-} */
-
-GTEST_TEST(Uuid, ParseCanonical)
-{
+GTEST_TEST(Uuid, ParseSuccess)
+{ // accept well-formed UUIDs
     Uuid a, b;
 
-    EXPECT_NO_THROW(parse("6ba7b810-9dad-11d1-80b4-00c04fd430c8", a)) << "a: " << to_string(a);
-    //ASSERT_EQ(a.data(), { 0 });
-
-    EXPECT_NO_THROW(parse("6ba7b810-9dad-11d1-80b4-00c04fd430c8", b)) << "b: " << to_string(b);
-
+    EXPECT_NO_THROW(a = parse("6ba7b810-9dad-11d1-80b4-00c04fd430c8"));
     ASSERT_TRUE(a.has_value());
+
+    EXPECT_NO_THROW(b = parse("6ba7b810-9dad-11d1-80b4-00c04fd430c8"));
     ASSERT_TRUE(b.has_value());
 
     ASSERT_EQ(a, b);
+}
+
+GTEST_TEST(Uuid, ParseFailure)
+{ // reject ill-formed UUIDs
+
+    const auto bad = {
+        "",
+        "00000000000000000000000000000000000000000000",
+        "00000000000000000000000000000000000000000000000000000",
+    };
+
+    for (const auto& s : bad)
+        EXPECT_THROW(auto _ = parse(s), std::invalid_argument);
+}
+
+GTEST_TEST(Uuid, Comparisons)
+{
+    const auto a = parse("6ba7b810-9dad-11d1-80b4-00c04fd430c8");
+    const auto b = parse("7ba7b810-9dad-11d1-80b4-00c04fd430c8");
+
+    ASSERT_GT(b, a) << "\na: " << a.string()
+                    << "\nb: " << b.string();
+
+    ASSERT_LT(a, b) << "\na: " << a.string()
+                    << "\nb: " << b.string();
 }
 
 GTEST_TEST(Uuid, Builder)
@@ -63,38 +89,8 @@ GTEST_TEST(Uuid, Builder)
     const uint8_t  node[6] = {};
 }
 
-GTEST_TEST(AddressEngine, Sequence1)
-{
-    AddressEngine gen{};
-    const Uuid    a = gen();
-    const Uuid    b = gen();
-
-    ASSERT_TRUE(a.has_value());
-    ASSERT_TRUE(b.has_value());
-
-    ASSERT_NE(a, b) << "a:" << to_string(a) << ", b:" << to_string(b);
-    ASSERT_LT(a, b) << "a:" << to_string(a) << ", b:" << to_string(b);
-}
-
-GTEST_TEST(AddressEngine, Sequence2)
-{
-    const auto iters = 1000u;
-
-    std::vector<Uuid> v;
-    v.reserve(iters);
-
-    AddressEngine gen{};
-    for (auto i = 0; i < iters; ++i)
-    {
-        const auto u = gen();
-        assert(std::find(std::cbegin(v), std::cend(v), u) == std::cend(v));
-        v.push_back(u);
-    }
-}
-
-// Generated UUIDs must be unique.
 GTEST_TEST(AddressEngine, UniquenessProperty)
-{
+{ // generated UUIDs must be unique.
     const auto     iters = 100'000;
     AddressEngine  gen{};
     std::set<Uuid> bag{};
@@ -102,12 +98,11 @@ GTEST_TEST(AddressEngine, UniquenessProperty)
     for (auto i = 0; i < iters; ++i)
         bag.insert(gen());
 
-    ASSERT_TRUE(std::size(bag) == iters);
+    ASSERT_EQ(std::size(bag), iters);
 }
 
-// Generated UUIDs must be in strictly increasing order.
 GTEST_TEST(AddressEngine, IncreasingOrderProperty)
-{
+{ // generated UUIDs must be in strictly increasing order.
     const auto        iters = 100'000;
     AddressEngine     gen{};
     std::vector<Uuid> bag{};
@@ -119,23 +114,38 @@ GTEST_TEST(AddressEngine, IncreasingOrderProperty)
     ASSERT_TRUE(std::is_sorted(std::cbegin(bag), std::cend(bag)));
 }
 
-
-// Generated UUIDs must be unique.
-GTEST_TEST(SystemEngine, UniquenessProperty)
-{
+GTEST_TEST(RandomEngine, UniquenessProperty)
+{ // generated UUIDs must be unique.
     const auto     iters = 100'000;
-    SystemEngine   gen{};
+    RandomEngine   gen{};
     std::set<Uuid> bag{};
 
     for (auto i = 0; i < iters; ++i)
         bag.insert(gen());
 
-    ASSERT_TRUE(std::size(bag) == iters);
+    ASSERT_EQ(std::size(bag), iters);
 }
 
-// Generated UUIDs must be in strictly increasing order.
+
+GTEST_TEST(SystemEngine, UniquenessProperty)
+{ // generated UUIDs must be unique.
+    const auto     iters = 100'000;
+    SystemEngine   gen{};
+    std::set<Uuid> bag{};
+
+    for (auto i = 0; i < iters; ++i)
+    {
+        const auto [_, unique] = bag.insert(gen());
+        ASSERT_TRUE(unique);
+    }
+
+    ASSERT_EQ(std::size(bag), iters);
+}
+
+// NOTE: current windows implementation does not guarantee this property
+/*
 GTEST_TEST(SystemEngine, IncreasingOrderProperty)
-{
+{ // generated UUIDs must be in strictly increasing order.
     const auto        iters = 100'000;
     SystemEngine      gen{};
     std::vector<Uuid> bag{};
@@ -146,3 +156,4 @@ GTEST_TEST(SystemEngine, IncreasingOrderProperty)
 
     ASSERT_TRUE(std::is_sorted(std::cbegin(bag), std::cend(bag)));
 }
+*/

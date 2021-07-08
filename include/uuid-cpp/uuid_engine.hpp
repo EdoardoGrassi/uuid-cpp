@@ -6,6 +6,7 @@
 
 #include <array>
 #include <cstddef>
+#include <random>
 
 namespace uuid
 {
@@ -34,9 +35,9 @@ namespace uuid
     /// @brief Generates UUIDs from a pseudo-random number source.
     class RandomEngine
     {
-        // TODO: end impl
     public:
-        explicit RandomEngine(std::uint64_t seed);
+        explicit RandomEngine();
+        //explicit RandomEngine(std::uint64_t seed);
 
         RandomEngine(const RandomEngine&) = default;
         RandomEngine& operator=(const RandomEngine&) = default;
@@ -45,13 +46,15 @@ namespace uuid
         [[nodiscard]] Uuid operator()() noexcept;
 
     private:
+        std::mt19937_64 _timestamp_gen;
+        std::mt19937_64 _clock_and_node_gen;
     };
 
 
     /// @brief Generates UUIDs from native system APIs.
     class SystemEngine
     {
-        // TODO: end impl
+        // TODO: end impl for other platforms
     public:
         explicit SystemEngine();
 
