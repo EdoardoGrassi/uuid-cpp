@@ -335,11 +335,12 @@ namespace uuid
         return s;
     }
 
-
+/*
     constexpr Uuid::Uuid(const std::string& s)
         : _bytes{ _safe_parse_canonical(s) }
     {
     }
+*/
 
 #if __cpp_lib_string_view
     constexpr Uuid::Uuid(const std::string_view s)

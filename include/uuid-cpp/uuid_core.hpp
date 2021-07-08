@@ -55,7 +55,7 @@ namespace uuid
 #endif
 
         /// @brief Constructs an UUID by parsing a string representation.
-        explicit constexpr Uuid(const std::string& s);
+        //explicit constexpr Uuid(const std::string& s);
 
 #if __cpp_lib_string_view
         /// @brief Constructs an UUID by parsing a string representation.
