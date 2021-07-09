@@ -10,6 +10,10 @@
 #include <string>
 #include <type_traits>
 
+#if __cpp_lib_concepts
+#include <concepts>
+#endif
+
 #if __cpp_lib_span
 #include <span>
 #endif
@@ -41,7 +45,12 @@ namespace uuid
 
         /// @brief Constructs an UUID from raw bytes.
         template <typename ForwardIt>
-        explicit constexpr Uuid(ForwardIt first, ForwardIt last)
+#if __cpp_concepts
+        requires std::forward_iterator<ForwardIt>
+#else
+        //template <typename ForwardIt>
+#endif
+            explicit constexpr Uuid(ForwardIt first, ForwardIt last)
         {
             assert(std::distance(first, last) == std::size(_bytes));
             std::copy(first, last, std::begin(_bytes));
@@ -54,12 +63,12 @@ namespace uuid
         }
 #endif
 
-        /// @brief Constructs an UUID by parsing a string representation.
-        //explicit constexpr Uuid(const std::string& s);
-
 #if __cpp_lib_string_view
         /// @brief Constructs an UUID by parsing a string representation.
         explicit constexpr Uuid(const std::string_view sw);
+#else
+        /// @brief Constructs an UUID by parsing a string representation.
+        explicit constexpr Uuid(const std::string& s);
 #endif
 
 
