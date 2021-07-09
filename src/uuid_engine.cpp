@@ -25,16 +25,19 @@ namespace uuid
 {
     enum class _variant : std::underlying_type_t<std::byte>
     {
-        rfc4122 // the variant specified in [RFC 4122]
+        ncs     = 0b0111'1111, // 0xxx    reserved, NCS backward compatibility
+        rfc4122 = 0b1011'1111, // 10xx    the variant specified in [RFC 4122]
+        msc     = 0b1101'1111, // 110x    reserved, Microsoft Corporation backward compatibility
+        future  = 0b1111'1111, // 111x    reserved for future definition
     };
 
     enum class _version : std::underlying_type_t<std::byte>
     {
-        rfc4122_v1 = 0b0001'1111, // time-based version
-        rfc4122_v2 = 0b0010'1111, // DCE security version
-        rfc4122_v3 = 0b0011'1111, // name-based version with MD5 hashing
-        rfc4122_v4 = 0b0100'1111, // randomly or pseudo-randomly generated version
-        rfc4122_v5 = 0b0101'1111  // name-based version with SHA1 hashing
+        rfc4122_v1 = 0b0001'1111, // 0001 xxxx      time-based version
+        rfc4122_v2 = 0b0010'1111, // 0010 xxxx      DCE security version
+        rfc4122_v3 = 0b0011'1111, // 0011 xxxx      name-based version with MD5 hashing
+        rfc4122_v4 = 0b0100'1111, // 0100 xxxx      randomly or pseudo-randomly generated version
+        rfc4122_v5 = 0b0101'1111  // 0101 xxxx      name-based version with SHA1 hashing
     };
 
     using _node_bytes = std::array<std::byte, 6>;
@@ -52,12 +55,14 @@ namespace uuid
 
     [[nodiscard]] std::uint64_t _version_1_timestamp() noexcept
     {
+        using namespace std::chrono;
+
         // [RFC 4122 4.1.4 Timestamp]
         // For UUID version 1, this is represented by Coordinated Universal Time(UTC)
         // as a count of 100 - nanosecond intervals since 00 : 00 : 00.00, 15 October 1582
         // (the date of Gregorian reform to the Christian calendar)
 
-        std::tm reference{
+        std::tm ref{
             .tm_sec  = 0,
             .tm_min  = 0,
             .tm_hour = 0,
@@ -65,13 +70,12 @@ namespace uuid
             .tm_mon  = 9,          // months since January [0-11]
             .tm_year = 1582 - 1900 // years since 1900
         };
-        const auto ref = std::mktime(&reference);
-        const auto old = std::chrono::system_clock::from_time_t(ref);
-        const auto now = std::chrono::system_clock::now();
+        const auto old  = system_clock::from_time_t(std::mktime(&ref));
+        const auto diff = system_clock::now() - old;
 
-        //const auto timestamp = std::chrono::system_clock::now().time_since_epoch();
-        const std::uint64_t timestamp = (now - old).count();
-        return timestamp;
+        const std::uint64_t timestamp = duration_cast<nanoseconds>(system_clock::now().time_since_epoch()).count();
+        //const std::uint64_t timestamp = duration_cast<nanoseconds>(diff).count();
+        return timestamp;// / 100;
     }
 
     [[nodiscard]] std::uint64_t _version_4_timestamp() noexcept
@@ -105,32 +109,15 @@ namespace uuid
         const auto variant_mask = static_cast<std::byte>(_variant::rfc4122);
 
         std::array<std::byte, 16> bytes{};
-        // time_low
-        bytes[0] = static_cast<std::byte>(timestamp >> (7 * sizeof(std::byte)));
-        bytes[1] = static_cast<std::byte>(timestamp >> (6 * sizeof(std::byte)));
-        bytes[2] = static_cast<std::byte>(timestamp >> (5 * sizeof(std::byte)));
-        bytes[3] = static_cast<std::byte>(timestamp >> (4 * sizeof(std::byte)));
-        // time_mid
-        bytes[4] = static_cast<std::byte>(timestamp >> (3 * sizeof(std::byte)));
-        bytes[5] = static_cast<std::byte>(timestamp >> (2 * sizeof(std::byte)));
-        // time_hi_and_version
-        bytes[6] = static_cast<std::byte>(timestamp >> (1 * sizeof(std::byte)));
-        bytes[7] = static_cast<std::byte>(timestamp >> (0 * sizeof(std::byte)));
+        // time_low | time_mid | time_hi_and_version
+        for (std::size_t i = 0; i < 8; ++i)
+            bytes[i] = static_cast<std::byte>(timestamp >> ((7 - i) * 8));
         bytes[7] &= version_mask;
 
-        // clk_seq_hi_res
-        bytes[8] = static_cast<std::byte>(clock_and_node >> (7 * sizeof(std::byte)));
+        // clk_seq_hi_res | clk_seq_low
+        for (std::size_t i = 0; i < 8; ++i)
+            bytes[i + 8] = static_cast<std::byte>(clock_and_node >> ((7 - i) * 8));
         bytes[8] &= variant_mask;
-        // clk_seq_low
-        bytes[9] = static_cast<std::byte>(clock_and_node >> (6 * sizeof(std::byte)));
-
-        // node
-        bytes[10] = static_cast<std::byte>(clock_and_node >> (5 * sizeof(std::byte)));
-        bytes[11] = static_cast<std::byte>(clock_and_node >> (4 * sizeof(std::byte)));
-        bytes[12] = static_cast<std::byte>(clock_and_node >> (3 * sizeof(std::byte)));
-        bytes[13] = static_cast<std::byte>(clock_and_node >> (2 * sizeof(std::byte)));
-        bytes[14] = static_cast<std::byte>(clock_and_node >> (1 * sizeof(std::byte)));
-        bytes[15] = static_cast<std::byte>(clock_and_node >> (0 * sizeof(std::byte)));
 
         return Uuid{ bytes };
     }
@@ -143,24 +130,16 @@ namespace uuid
         const auto variant_mask = static_cast<std::byte>(_variant::rfc4122);
 
         std::array<std::byte, 16> bytes{};
-        // time_low
-        bytes[0] = static_cast<std::byte>(timestamp >> (7 * sizeof(std::byte)));
-        bytes[1] = static_cast<std::byte>(timestamp >> (6 * sizeof(std::byte)));
-        bytes[2] = static_cast<std::byte>(timestamp >> (5 * sizeof(std::byte)));
-        bytes[3] = static_cast<std::byte>(timestamp >> (4 * sizeof(std::byte)));
-        // time_mid
-        bytes[4] = static_cast<std::byte>(timestamp >> (3 * sizeof(std::byte)));
-        bytes[5] = static_cast<std::byte>(timestamp >> (2 * sizeof(std::byte)));
-        // time_hi_and_version
-        bytes[6] = static_cast<std::byte>(timestamp >> (1 * sizeof(std::byte)));
-        bytes[7] = static_cast<std::byte>(timestamp >> (0 * sizeof(std::byte)));
+        // time_low | time_mid | time_hi_and_version
+        for (std::size_t i = 0; i < 8; ++i)
+            bytes[i] = static_cast<std::byte>(timestamp >> ((7 - i) * 8));
         bytes[7] &= version_mask;
 
         // clk_seq_hi_res
-        bytes[8] = static_cast<std::byte>(clock >> (1 * sizeof(std::byte)));
+        bytes[8] = static_cast<std::byte>(clock >> (1 * 8));
         bytes[8] &= variant_mask;
         // clk_seq_low
-        bytes[9] = static_cast<std::byte>(clock >> (0 * sizeof(std::byte)));
+        bytes[9] = static_cast<std::byte>(clock >> (0 * 8));
 
         // node
         for (size_t i = 0; i < std::size(node); ++i)

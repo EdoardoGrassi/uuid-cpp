@@ -70,9 +70,9 @@ namespace uuid
         [[nodiscard]] constexpr bool operator==(const Uuid&) const& noexcept; // = default;
         //[[nodiscard]] constexpr bool operator!=(const Uuid&) const& noexcept = default;
         [[nodiscard]] constexpr bool operator<(const Uuid&) const& noexcept; // = default;
-        [[nodiscard]] constexpr bool operator>(const Uuid&) const& noexcept; // = default;
-        [[nodiscard]] constexpr bool operator<=(const Uuid&) const& noexcept = default;
-        [[nodiscard]] constexpr bool operator>=(const Uuid&) const& noexcept = default;
+        //[[nodiscard]] constexpr bool operator>(const Uuid&) const& noexcept  = default;
+        //[[nodiscard]] constexpr bool operator<=(const Uuid&) const& noexcept = default;
+        //[[nodiscard]] constexpr bool operator>=(const Uuid&) const& noexcept = default;
 
         /// @brief Resets to null UUID.
         void clear() noexcept { _bytes.fill(std::byte{ 0 }); }
@@ -102,17 +102,17 @@ namespace uuid
 
     constexpr inline bool Uuid::operator==(const Uuid& other) const& noexcept
     {
-        return _bytes == other._bytes;
-    }
-
-    constexpr inline bool Uuid::operator>(const Uuid& other) const& noexcept
-    {
-        return _bytes > other._bytes;
+        //return std::memcmp(std::data(_bytes), std::data(other._bytes), std::size(_bytes)) == 0;
+        return std::equal(
+            std::cbegin(_bytes), std::cend(_bytes), std::cbegin(other._bytes));
     }
 
     constexpr inline bool Uuid::operator<(const Uuid& other) const& noexcept
     {
-        return _bytes < other._bytes;
+        //return std::memcmp(std::data(_bytes), std::data(other._bytes), std::size(_bytes)) > 0;
+        return std::lexicographical_compare(
+            std::cbegin(_bytes), std::cend(_bytes),
+            std::cbegin(other._bytes), std::cend(other._bytes));
     }
 
 

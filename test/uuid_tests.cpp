@@ -9,6 +9,11 @@
 
 using namespace uuid;
 
+const std::regex well_formed_uuid{
+    "[[:xdigit:]]{8}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{12}",
+    std::regex_constants::optimize
+};
+
 GTEST_TEST(Uuid, Null)
 {
     const Uuid a{}; // default constructed uuid is null
@@ -32,16 +37,11 @@ GTEST_TEST(Uuid, ToString)
 {
     ASSERT_EQ(to_string(Uuid{}), "00000000-0000-0000-0000-000000000000");
 
-    const std::regex well_formed{
-        "[[:xdigit:]]{8}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{12}",
-        std::regex_constants::optimize
-    };
-
     SystemEngine gen{};
     for (auto i = 0; i < 100'000; ++i)
     {
         const auto s = to_string(gen());
-        ASSERT_TRUE(std::regex_match(s, well_formed)) << "uuid: " << s;
+        ASSERT_TRUE(std::regex_match(s, well_formed_uuid)) << "uuid: " << s;
     }
 }
 
@@ -56,19 +56,32 @@ GTEST_TEST(Uuid, ParseSuccess)
     ASSERT_TRUE(b.has_value());
 
     ASSERT_EQ(a, b);
+
+    const std::string good[] = {
+        "00000000-0000-0000-0000-000000000000",
+        "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+        "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+    };
+    for (const auto& s : good)
+    {
+        ASSERT_TRUE(std::regex_match(s, well_formed_uuid)) << "s: " << s;
+        EXPECT_NO_THROW(auto _ = parse(s)) << "s: " << s;
+    }
 }
 
 GTEST_TEST(Uuid, ParseFailure)
 { // reject ill-formed UUIDs
 
-    const auto bad = {
+    const std::string bad[] = {
         "",
         "00000000000000000000000000000000000000000000",
         "00000000000000000000000000000000000000000000000000000",
     };
-
     for (const auto& s : bad)
+    {
+        ASSERT_FALSE(std::regex_match(s, well_formed_uuid));
         EXPECT_THROW(auto _ = parse(s), std::invalid_argument);
+    }
 }
 
 GTEST_TEST(Uuid, Comparisons)
@@ -76,10 +89,10 @@ GTEST_TEST(Uuid, Comparisons)
     const auto a = parse("6ba7b810-9dad-11d1-80b4-00c04fd430c8");
     const auto b = parse("7ba7b810-9dad-11d1-80b4-00c04fd430c8");
 
-    ASSERT_GT(b, a) << "\na: " << a.string()
+    ASSERT_LT(a, b) << "\na: " << a.string()
                     << "\nb: " << b.string();
 
-    ASSERT_LT(a, b) << "\na: " << a.string()
+    ASSERT_GT(b, a) << "\na: " << a.string()
                     << "\nb: " << b.string();
 }
 
